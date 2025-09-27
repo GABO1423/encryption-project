@@ -1,0 +1,24 @@
+[package]
+name = "encryption-project"
+version = "0.1.0"
+edition = "2024"
+
+[[bin]]
+name = "sender"
+path = "src/sender/main.rs"
+
+[[bin]]
+name = "receiver"
+path = "src/reciever/main.rs"
+
+[dependencies]
+actix = "0.13"
+actix-web = "4"
+actix-multipart = "0.7.2"
+mongodb = "3.3.0"
+tokio = {version = "1", features = ["macros", "rt-multi-thread"]}
+futures = "0.3"
+aes-gcm = "0.10.1"
+rand = { version = "0.8", features = ["getrandom"] }
+hex = "0.4.3"
+rsa = "0.9"
