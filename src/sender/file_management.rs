@@ -3,7 +3,7 @@ use actix_web::web::Data;
 use std::sync::{Arc, Mutex};
 use std::collections::HashMap;
 
-type InMemoryStorage = Arc<Mutex<HashMap<String, Vec<u8>>>>;
+pub type InMemoryStorage = Arc<Mutex<HashMap<String, Vec<u8>>>>;
 
 pub fn upload_local_file(
     file_path: &Path,
