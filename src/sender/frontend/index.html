@@ -12,40 +12,34 @@
             <input type="file" id="localFile">
             <button onclick="uploadFile()">Upload</button>
         </div>
-        <script>const UPLOAD_URL = '/upload'; 
+        <script>
+            const UPLOAD_URL = '/upload'; 
+            function uploadFile()
+            {
+                const fileInput = document.getElementById('localFile');
 
-            function uploadFile() {
-            const fileInput = document.getElementById('localFile');
-    
-        if (!fileInput || fileInput.files.length === 0) {
-            alert('Please, enter a file.');
-            console.error('No file selected.');
-            return;
-        }
+                if (!fileInput || fileInput.files.length === 0)
+                {
+                    alert('Please select a file.');
+                    console.error('No file selected.');
+                    return;
+                }
 
-        const file = fileInput.files[0];
-        
-        const fileToSend = file;
+                const file = fileInput.files[0];
+                const fileToSend = file;
+                const formData = new FormData();
 
-        const formData = new FormData();
-        
-        formData.append('file', fileToSend, fileToSend.name); 
-
-        console.log(`Uploading..: ${file.name} to ${UPLOAD_URL}`);
-        
-        fetch(UPLOAD_URL, { method: 'POST',body: formData })
-        .then(response => {
-            if (response.ok) {
-                return response.text();
-            } 
-            throw new Error(`Error HTTP ${response.status}: ${response.statusText}`);
-        })
-        .then(data => {
-            console.log('Upload done.', data);
-        })
-        .catch(error => {
-            console.error('UploadError', error);
-        });
-    }</script>
+                formData.append('file', fileToSend, fileToSend.name); 
+                console.log(`Uploading..: ${file.name} to ${UPLOAD_URL}`);
+                
+                fetch(UPLOAD_URL, {method: 'POST', body: formData}).then(response =>
+                {
+                    if (response.ok) return response.text();
+                    throw new Error(`Error HTTP ${response.status}: ${response.statusText}`);
+                })
+                .then(data => {console.log('Uploaded file.', data);})
+                .catch(error => {console.error(`Upload Error: ${error}`);});
+            }
+        </script>
     </body>
 </html>
