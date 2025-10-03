@@ -1,4 +1,6 @@
-use actix_web::{App, HttpServer, HttpResponse, Error, get, Responder, web};
+use actix::fut::ok;
+use actix::Response;
+use actix_web::{body, get, web, App, Error, HttpResponse, HttpServer, Responder};
 use actix_multipart::Multipart;
 use futures::TryStreamExt;
 use std::sync::{Arc, Mutex};
@@ -7,15 +9,29 @@ use crate::file_management::InMemoryStorage;
 use actix_files::Files;
 use bytes::BytesMut;
 use std::borrow::Cow;
+use reqwest::Client;
 
 mod file_management;
 mod encryption_helper;
 
 const URL: &str = "localhost";
 const PORT: u16 = 8080;
+const KEY_SERVER_URL : &str = "http://localhost:8081/public-key";
 
 async fn handle_upload(mut payload: Multipart, storage: web::Data<InMemoryStorage>) -> Result<HttpResponse, actix_web::Error>
 {
+
+    let response = reqwest::get(KEY_SERVER_URL).await.map_err(actix_web::error::ErrorInternalServerError)?;
+
+    let body = if response.status().is_success() {
+        let public_key = response.text().await.map_err(actix_web::error::ErrorInternalServerError)?;
+        println!("Public key is: {}", public_key);
+        public_key
+    } else {
+        println!("Failed status: {}", response.status());
+        String::new()
+    };
+
     while let Some(mut field) = payload.try_next().await? {
         let filename = field.content_disposition()
             .and_then(|cd| cd.get_filename())
@@ -42,7 +58,6 @@ async fn handle_upload(mut payload: Multipart, storage: web::Data<InMemoryStorag
         
         return Ok(HttpResponse::Ok().body(format!("File '{}' processed and stored.", filename)));
     }
-    
     Ok(HttpResponse::BadRequest().body("No files found in the request."))
 }
 
