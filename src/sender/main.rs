@@ -20,23 +20,24 @@ const KEY_SERVER_URL : &str = "http://localhost:8081/public-key";
 
 async fn handle_upload(mut payload: Multipart, storage: web::Data<InMemoryStorage>) -> Result<HttpResponse, actix_web::Error>
 {
-
     let response = reqwest::get(KEY_SERVER_URL).await.map_err(actix_web::error::ErrorInternalServerError)?;
 
-    let body = if response.status().is_success() {
+    let body = if response.status().is_success()
+    {
         let public_key = response.text().await.map_err(actix_web::error::ErrorInternalServerError)?;
-        println!("Public key is: {}", public_key);
+        println!("Public key: {}", public_key);
         public_key
-    } else {
-        println!("Failed status: {}", response.status());
+    }
+    else
+    {
+        println!("Failed: {}", response.status());
         String::new()
     };
 
-    while let Some(mut field) = payload.try_next().await? {
-        let filename = field.content_disposition()
-            .and_then(|cd| cd.get_filename())
-            .map(|s| s.to_string())
-            .unwrap_or_else(|| "unnamed_file".to_string());
+    while let Some(mut field) = payload.try_next().await?
+    {
+        let filename = field.content_disposition().and_then(|cd| cd.get_filename())
+            .map(|s| s.to_string()).unwrap_or_else(|| "unnamed_file".to_string());
 
         let mut buffer = BytesMut::new();
         while let Some(chunk) = field.try_next().await? {buffer.extend_from_slice(&chunk);}
@@ -68,7 +69,7 @@ async fn main() -> std::io::Result<()>
     let storage_data = web::Data::new(storage.clone());
     let server = HttpServer::new(move || {
         App::new().app_data(storage_data.clone()).route("/upload", web::post().to(handle_upload))
-            .service(Files::new("/", "./src/sender/frontend").index_file("index.html"))}).bind((URL, PORT))?;
+        .service(Files::new("/", "./src/sender/frontend").index_file("index.html"))}).bind((URL, PORT))?;
 
     clearscreen::clear().map_err(|e| std::io::Error::new(std::io::ErrorKind::Other, e))?;
     println!("Server running at http://{}:{}", URL, PORT);
