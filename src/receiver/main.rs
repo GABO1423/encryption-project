@@ -9,15 +9,18 @@ type SharedPublicKeyPem = Arc<String>;
 const URL: &str = "localhost";
 const PORT: u16 = 8081;
 
-async fn generate_keys_asynchronously() -> RsaPrivateKey
+async fn generate_keys() -> (RsaPrivateKey, RsaPublicKey)
 {
-    task::spawn_blocking(||
+    let private_key = task::spawn_blocking(||
     {
         let mut rng = OsRng;
         let bits = 2048; 
         RsaPrivateKey::new(&mut rng, bits).expect("Failed to generate keys")
     })
-    .await.expect("Key generation task on the blocking thread failed")
+    .await.expect("Key generation task on the blocking thread failed");
+
+    let public_key = RsaPublicKey::from(&private_key);
+    (private_key, public_key)
 }
 
 #[get("/public-key")]
@@ -25,16 +28,14 @@ async fn get_public_key() -> impl Responder
 {
     println!("Generating new RSA key...");
 
-    let mut private_key = generate_keys_asynchronously().await;
-    //let mut private_key_pem_string = private_key.to_public_key_pem(LineEnding::LF).expect("Failed to encode public key to PEM");
-    let private_pem = private_key.to_pkcs8_pem(LineEnding::LF).expect("Fallo la privada");
-    let mut public_key = RsaPublicKey::from(&private_key);
-    let mut public_key_pem_string = public_key.to_public_key_pem(LineEnding::LF).expect("Failed to encode public key to PEM");
+    let (private_key, public_key) = generate_keys().await;
+    let mut public_key_pem = public_key.to_public_key_pem(LineEnding::LF).expect("Failed to encode public key to PEM");
     //let shared_public_key_pem: SharedPublicKeyPem = Arc::new(public_key_pem_string.clone());
-
-    println!("{:?}",private_pem);
+    
+    /*let private_pem = private_key.to_pkcs8_pem(LineEnding::LF).expect("Fallo la privada");
+    println!("{:?}",private_pem);*/
     println!("Sending public key...\n");
-    HttpResponse::Ok().content_type("application/x-pem-file").body(public_key_pem_string)
+    HttpResponse::Ok().content_type("application/x-pem-file").body(public_key_pem)
 }
 
 #[actix_web::main]
