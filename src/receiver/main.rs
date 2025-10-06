@@ -1,10 +1,7 @@
-use actix_web::{web, App, HttpServer, HttpResponse, Responder, get};
-use rsa::{RsaPrivateKey, RsaPublicKey, pkcs8::{EncodePrivateKey, EncodePublicKey, LineEnding}};
+use actix_web::{App, HttpServer, HttpResponse, Responder, get};
+use rsa::{RsaPrivateKey, RsaPublicKey, pkcs8::{EncodePublicKey, LineEnding}};
 use tokio::task;
 use rand::rngs::OsRng;
-use std::sync::Arc;
-
-type SharedPublicKeyPem = Arc<String>;
 
 const URL: &str = "localhost";
 const PORT: u16 = 8081;
@@ -28,8 +25,9 @@ async fn get_public_key() -> impl Responder
 {
     println!("Generating new RSA key...");
 
-    let (private_key, public_key) = generate_keys().await;
-    let mut public_key_pem = public_key.to_public_key_pem(LineEnding::LF).expect("Failed to encode public key to PEM");
+    // is _private_key because rn it's unused, delete the first _ when it's going to be used
+    let (_private_key, public_key) = generate_keys().await;
+    let public_key_pem = public_key.to_public_key_pem(LineEnding::LF).expect("Failed to encode public key to PEM");
     //let shared_public_key_pem: SharedPublicKeyPem = Arc::new(public_key_pem_string.clone());
     
     /*let private_pem = private_key.to_pkcs8_pem(LineEnding::LF).expect("Fallo la privada");
