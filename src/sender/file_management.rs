@@ -1,37 +1,30 @@
-use std::{fs::File, io::Read, path::Path};
-use actix_web::web::Data;
 use std::sync::{Arc, Mutex};
 use std::collections::HashMap;
 
 pub type InMemoryStorage = Arc<Mutex<HashMap<String, Vec<u8>>>>;
-pub fn upload_local_file(file_path: &Path, storage: &Data<InMemoryStorage>,) -> Result<String, std::io::Error>
-{
-    let filename = file_path.file_name().and_then(|name| name.to_str()).ok_or_else(||
-    {
-        std::io::Error::new(std::io::ErrorKind::InvalidInput,
-            "Invalid file path / Cannot find file name.")
-    })?.to_string();
 
-    let mut file = File::open(file_path)?;
-    let mut file_data = Vec::new();
-    file.read_to_end(&mut file_data)?;
-
-    let mut storage_lock = storage.lock().unwrap();
-    storage_lock.insert(filename.clone(), file_data);
-    Ok(filename)
-}
-
-pub fn view_file_content(filename: &str, storage: &Data<InMemoryStorage>) -> Result<String, String>
-{
-    let storage_lock = storage.lock().unwrap();
-
-    if let Some(file_data) = storage_lock.get(filename)
-    {
-        match str::from_utf8(file_data)
-        {
-            Ok(text) => Ok(text.to_string()),
-            Err(e) => Err(format!("Error translating. ({})", e))
+pub fn view_file_content(filename: &str, storage: &InMemoryStorage) -> Result<String, String> {
+    let storage_lock = storage.lock().map_err(|_| "Failed to lock storage mutex".to_string())?;
+    if let Some(file_data) = storage_lock.get(filename) {
+        match str::from_utf8(file_data) {
+            Ok(text) => {
+                let preview = if text.len() > 50 {
+                    format!("{}...", &text[..50])
+                } else {
+                    text.to_string()
+                };
+                println!("Storage Check: File '{}' content preview ({} bytes): '{}'", filename, file_data.len(), preview);
+                return Ok(text.to_string())
+            },
+            Err(e) => {
+                let error_msg = format!("Error translating file data to UTF-8. This file is likely binary or non-text. ({})", e);
+                println!("Error: {}", error_msg);
+                return Err(error_msg)
+            }
         }
+    } else {
+        let error_msg = format!("file '{}' does not exist in storage.", filename);
+        println!("Error: {}", error_msg);
+        return Err(error_msg)
     }
-    else {Err(format!("Error: file '{}' does not exist.", filename))}
 }

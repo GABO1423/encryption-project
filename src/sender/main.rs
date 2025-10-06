@@ -1,31 +1,41 @@
-use actix::fut::ok;
-use actix::Response;
-use actix_web::{body, get, web, App, Error, HttpResponse, HttpServer, Responder};
+use actix_web::{web, App, HttpResponse, HttpServer};
 use actix_multipart::Multipart;
 use futures::TryStreamExt;
+use rsa::pkcs8::DecodePublicKey;
 use std::sync::{Arc, Mutex};
 use std::collections::HashMap;
-use crate::file_management::InMemoryStorage;
+use crate::encryption_helper::{encrypt_file, encrypt_key, generate_key};
+use crate::file_management::{InMemoryStorage};
 use actix_files::Files;
 use bytes::BytesMut;
-use std::borrow::Cow;
-use reqwest::Client;
+use rsa::RsaPublicKey;
+use serde::Serialize;
+use base64::{engine::general_purpose, Engine as _};
 
 mod file_management;
 mod encryption_helper;
 
 const URL: &str = "localhost";
 const PORT: u16 = 8080;
-const KEY_SERVER_URL : &str = "http://localhost:8081/public-key";
+const URL_PUBLIC_KEY : &str = "http://localhost:8081/public-key";
+const URL_SEND_INFO: &str = "http://localhost:8081/receive-data";
 
-async fn handle_upload(mut payload: Multipart, storage: web::Data<InMemoryStorage>) -> Result<HttpResponse, actix_web::Error>
+#[derive(Debug, Serialize)]
+struct EncryptedTransferData {
+    encrypted_file_b64: String,
+    encrypted_key_b64: String,
+    filename: String,
+}
+
+
+async fn handle_upload(mut payload: Multipart, _storage: web::Data<InMemoryStorage>) -> Result<HttpResponse, actix_web::Error>
 {
-    let response = reqwest::get(KEY_SERVER_URL).await.map_err(actix_web::error::ErrorInternalServerError)?;
+    let response = reqwest::get(URL_PUBLIC_KEY).await.map_err(actix_web::error::ErrorInternalServerError)?;
 
     let body = if response.status().is_success()
     {
         let public_key = response.text().await.map_err(actix_web::error::ErrorInternalServerError)?;
-        println!("Public key: {}", public_key);
+        println!("received public key successfully.");
         public_key
     }
     else
@@ -33,6 +43,13 @@ async fn handle_upload(mut payload: Multipart, storage: web::Data<InMemoryStorag
         println!("Failed: {}", response.status());
         String::new()
     };
+
+    let parsed_public_key = RsaPublicKey::from_public_key_pem(&body)
+        .map_err(|e| {
+            eprintln!("Error parsing RSA Key: {:?}", e);
+            actix_web::error::ErrorInternalServerError("Invalid public key format received.")
+       })?;
+
 
     while let Some(mut field) = payload.try_next().await?
     {
@@ -44,20 +61,57 @@ async fn handle_upload(mut payload: Multipart, storage: web::Data<InMemoryStorag
         
         let file_data = buffer.freeze();
         println!("Received file: {}", filename);
+
+        //let mut storage_lock = storage.lock().unwrap();
+        //storage_lock.insert(filename.clone(), file_data.to_vec());
+        //drop(storage_lock);
+
+        let (_key, _nonce) = generate_key();
+
+        let encrypted_file = encrypt_file(&file_data, &_key, &_nonce).map_err(|e| {
+            println!("Encryption error: {}", e);
+            actix_web::error::ErrorInternalServerError("File encryption failed")
+        })?;
+
+        let encrypted_key = encrypt_key(&_key, &parsed_public_key).map_err(|e| {
+            println!("Key encryption error: {}", e);
+            actix_web::error::ErrorInternalServerError("Key encryption failed")
+        })?;
         
-        let content_display = if let Ok(s) = std::str::from_utf8(&file_data) {Cow::Borrowed(s)}
-        else
-        {
-            let hex_preview = file_data.iter().take(30).map(|b| format!("{:02X}", b)).collect::<Vec<String>>().join(" ");
-            Cow::Owned(format!("<Binary Content: {} bytes> Preview (Hex): {}", file_data.len(), hex_preview))
+        println!("Encrypted file size: {:?}", encrypted_file);
+        println!("Encrypted key size: {:?}", encrypted_key);
+
+        let encrypted_file_b64 = general_purpose::STANDARD.encode(&encrypted_file);
+        let encrypted_key_b64 = general_purpose::STANDARD.encode(&encrypted_key);
+
+        let transfer_data = EncryptedTransferData {
+            encrypted_file_b64,
+            encrypted_key_b64,
+            filename: filename.clone(),
         };
+
+        let client = reqwest::Client::new();
+        let forward_response = client.post(URL_SEND_INFO)
+            .json(&transfer_data)
+            .send()
+            .await
+            .map_err(actix_web::error::ErrorInternalServerError)?;
+
+        if forward_response.status().is_success() {
+            println!("Data successfully forwarded to {}", URL_SEND_INFO);
+            return Ok(HttpResponse::Ok().body(format!("File '{}' processed and forwarded successfully.", filename)));
+        } else {
+            let status = forward_response.status();
+            let text = forward_response.text().await.unwrap_or_else(|_| "No body received".to_string());
+            eprintln!("Failed to forward data. Status: {}. Response: {}", status, text);
+            return Err(actix_web::error::ErrorInternalServerError(format!("Failed to forward data to the key server: {}", status)));
+        }
+
         
-        println!("File content:\n{}", content_display);
-        
-        let mut storage_lock = storage.lock().unwrap();
-        storage_lock.insert(filename.clone(), file_data.to_vec());
-        
-        return Ok(HttpResponse::Ok().body(format!("File '{}' processed and stored.", filename)));
+        // Helper to see what in the data on the file.
+        // if let Err(e) = view_file_content(&filename, &storage) {
+        //    println!("Error viewing file content: {}", e);
+        // }
     }
     Ok(HttpResponse::BadRequest().body("No files found in the request."))
 }
