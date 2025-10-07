@@ -4,11 +4,12 @@ use tokio::task;
 use rand::rngs::OsRng;
 use serde::Deserialize;
 use base64::{engine::general_purpose, Engine as _};
+use sqlx::PgPool;
+use std::env;
+use dotenvy::dotenv;
 
 const URL: &str = "localhost";
 const PORT: u16 = 8081;
-
-
 
 #[derive(Debug, Deserialize)]
 struct IncomingTransferData {
@@ -69,8 +70,30 @@ async fn get_public_key() -> impl Responder
 #[actix_web::main]
 async fn main() -> std::io::Result<()>
 {
+    dotenv().ok();
     let server_address = format!("{}:{}", URL, PORT);
     println!("Key Server running at http://{}/public-key", server_address);
+
+    let database_url = env::var("DATABASE_URL")
+    .expect("ERROR: The DATABASE_URL environment variable is not configured or could not be loaded.");
+
+    println!("Connecting to the database...");
+    let pool = match PgPool::connect(&database_url).await {
+        Ok(p) => {
+            println!("Connection successful.");
+            p
+        },
+        Err(e) => {
+            eprintln!("Error connecting to the database: {}", e);
+            return Err(std::io::Error::new(std::io::ErrorKind::Other, e.to_string()));
+        }
+    };
+
+    /* EXAMPLE OF HOW TO USE IT
+    let row: (i64,) = sqlx::query_as("SELECT 100")
+        .fetch_one(&pool)
+        .await?;
+    */
 
     let server = HttpServer::new(move || {
         App::new()
