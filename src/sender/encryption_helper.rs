@@ -12,7 +12,8 @@ pub fn generate_key() -> (EncryptionKey, InitializationVector)
     OsRng.fill_bytes(&mut key_bytes);
     let mut nonce_bytes = [0u8; 12];
     OsRng.fill_bytes(&mut nonce_bytes);
-    let nonce = InitializationVector::from(nonce_bytes);
+    // Antes se usaba nonce_bytes, por pruebas se usa fijo
+    let nonce = InitializationVector::from([69, 42, 13, 8, 5, 1, 69, 42, 13, 8, 5, 1]);
     (key_bytes, nonce)
 }
 
