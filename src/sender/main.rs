@@ -78,8 +78,8 @@ async fn handle_upload(mut payload: Multipart, _storage: web::Data<InMemoryStora
             actix_web::error::ErrorInternalServerError("Key encryption failed")
         })?;
         
-        println!("Encrypted file size: {:?}", encrypted_file);
-        println!("Encrypted key size: {:?}", encrypted_key);
+        println!("File data: {:?}", file_data);
+        println!("key size: {:?}", _key);
 
         let encrypted_file_b64 = general_purpose::STANDARD.encode(&encrypted_file);
         let encrypted_key_b64 = general_purpose::STANDARD.encode(&encrypted_key);
