@@ -6,20 +6,21 @@ body
     height: 100vh;
     margin: 0;
     font-family: Arial, sans-serif;
-    background-color: #e3f2fd;
+    background-color: #1f2023;
+    color: #dadada;
     text-align: center;
 }
   
 .container
 {
     text-align: center;
-    background-color: #fff;
+    background-color: #2a2c30;
     padding: 20px;
     border-radius: 8px;
     box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
 }
 
-h2 {color: #1565c0;}
+h2 {color: #4A90E2;}
   
 input[type="file"]
 {
