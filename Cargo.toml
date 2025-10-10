@@ -12,23 +12,20 @@ name = "receiver"
 path = "src/receiver/main.rs"
 
 [dependencies]
-actix = "0.13"
 actix-web = "4"
 actix-multipart = "0.7.2"
 actix-files = "0.6"
 tokio = {version = "1", features = ["macros", "rt-multi-thread","full"]}
 futures = "0.3"
 aes-gcm = "0.10.1"
-rand = { version = "0.8", features = ["getrandom"] }
-hex = "0.4.3"
-rsa = { version = "0.9", features = ["pem"] } 
-postgres = "0.19.0"
+rand = {version = "0.8", features = ["getrandom"]}
+rsa = {version = "0.9", features = ["pem"]} 
 clearscreen = "1.0"
 bytes = "1.10.1"
-reqwest = { version = "0.12", features = ["rustls-tls", "json"] }
-serde = { version = "1.0", features = ["derive"] }
+reqwest = {version = "0.12", features = ["rustls-tls", "json"]}
+serde = {version = "1.0", features = ["derive"] }
 base64 = "0.21"
-sqlx = { version = "0.8.1", features = ["runtime-tokio", "tls-native-tls", "postgres"] }
+sqlx = {version = "0.8.1", features = ["runtime-tokio", "tls-native-tls", "postgres"]}
 dotenvy = "0.15"
-uuid = { version = "1.4", features = ["v4"] } 
+uuid = {version = "1.4", features = ["v4"]} 
 mime_guess = "2.0"

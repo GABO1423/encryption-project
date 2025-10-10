@@ -1,5 +1,3 @@
 /target
 Cargo.lock
-.env
-.sqlx
 src/receiver/encrypted_files

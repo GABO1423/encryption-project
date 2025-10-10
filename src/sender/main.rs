@@ -12,7 +12,6 @@ use serde::{Serialize, Deserialize};
 use base64::{engine::general_purpose, Engine as _};
 
 pub type InMemoryStorage = Arc<Mutex<HashMap<String, Vec<u8>>>>; 
-
 mod encryption_helper;
 
 const URL: &str = "localhost";
@@ -31,7 +30,8 @@ struct EncryptedTransferData
 }
 
 #[derive(Debug, Deserialize)]
-struct KeyResponse {
+struct KeyResponse
+{
     public_key_pem: String,
     transfer_id: String
 }
@@ -39,10 +39,7 @@ struct KeyResponse {
 async fn handle_upload(mut payload: Multipart, _storage: web::Data<InMemoryStorage>) -> Result<HttpResponse, actix_web::Error>
 {
     let response = reqwest::get(URL_PUBLIC_KEY).await.map_err(actix_web::error::ErrorInternalServerError)?;
-    let key_response: KeyResponse = if response.status().is_success()
-    {
-        response.json().await.map_err(actix_web::error::ErrorInternalServerError)?
-    }
+    let key_response: KeyResponse = if response.status().is_success() {response.json().await.map_err(actix_web::error::ErrorInternalServerError)?}
     else
     {
         let status = response.status();
@@ -54,7 +51,7 @@ async fn handle_upload(mut payload: Multipart, _storage: web::Data<InMemoryStora
 
     let parsed_public_key = RsaPublicKey::from_public_key_pem(&key_response.public_key_pem)
         .map_err(|e| {eprintln!("Error parsing RSA Public Key: {:?}", e);
-        actix_web::error::ErrorInternalServerError("Invalid public key format received.")})?;
+    actix_web::error::ErrorInternalServerError("Invalid public key format received.")})?;
 
     let transfer_id = key_response.transfer_id;
     
@@ -84,7 +81,6 @@ async fn handle_upload(mut payload: Multipart, _storage: web::Data<InMemoryStora
         })?;
         
         let nonce_b64 = general_purpose::STANDARD.encode(nonce.as_slice());
-
         let encrypted_file_b64 = general_purpose::STANDARD.encode(&encrypted_file);
         let encrypted_key_b64 = general_purpose::STANDARD.encode(&encrypted_key);
 
