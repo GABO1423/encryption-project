@@ -1,7 +1,7 @@
 <html lang="en">
     <head>
         <meta charset="UTF-8">
-        <title>Sender</title>
+        <title>Receiver</title>
         <link rel="stylesheet" href="main.css">
         <link rel="icon" href="favicon.ico" type="image/x-icon">
     </head>
@@ -9,16 +9,229 @@
         <div class="main-content-area">
             <div id="file-explorer" class="file-list-panel">
                 <h2>File List</h2>
-                <ul id="file-list">
-                    <li class="file-item active">file_001.txt</li>
-                </ul>
+                <ul id="file-list"></ul>
             </div>
             <div id="file-viewer" class="file-viewer-panel">
-                <h2>File Content</h2>
+                <div class="file-viewer-actions">
+                    <h2 id="file-content-title">File Content</h2>
+                    <div class="action-buttons">
+                        <button id="refresh-file">Refresh</button>
+                        <button id="download-file" disabled>Download</button>
+                        <button id="delete-file" disabled>Remove</button>
+                    </div>
+                </div>
                 <div class="content-display">
-                    <pre>Hello World.</pre>
+                    <pre>Select a file from the list to preview its content.</pre>
                 </div>
             </div>
         </div>
+        <script>
+            document.addEventListener('DOMContentLoaded', () =>
+            {
+                const fileListElement = document.getElementById('file-list');
+                const contentDisplay = document.querySelector('.content-display');
+                const fileContentTitle = document.getElementById('file-content-title');
+                const refreshButton = document.getElementById('refresh-file');
+                const downloadButton = document.getElementById('download-file');
+                const deleteButton = document.getElementById('delete-file');
+                let currentFileId = null;
+                let currentFileName = null;
+
+                function getFileType(fileName)
+                {
+                    const ext = fileName.split('.').pop().toLowerCase();
+                    if (['jpg', 'jpeg', 'png', 'gif', 'bmp', 'webp', 'svg', 'ico'].includes(ext)) return 'image';
+                    if (['mp3', 'wav', 'ogg', 'flac', 'm4a'].includes(ext)) return 'audio';
+                    if (['mp4', 'webm', 'ogg', 'mov', 'avi'].includes(ext)) return 'video';
+                    return 'text';
+                }
+
+                async function fetchFiles()
+                {
+                    try
+                    {
+                        contentDisplay.innerHTML = '<pre>Refreshing files...</pre>';
+                        const response = await fetch('/api/files');
+                        if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+                        fileListElement.innerHTML = '';
+                        const files = await response.json();
+
+                        if (files.length > 0) renderFileList(files);
+                        else
+                        {
+                            contentDisplay.innerHTML = '<pre>No files uploaded yet.</pre>';
+                            fileContentTitle.textContent = 'File Content';
+                            currentFileId = null;
+                            currentFileName = null;
+                            toggleActionButtons(false);
+                        }
+                    }
+                    catch (error)
+                    {
+                        console.error('Error fetching file list:', error);
+                        contentDisplay.innerHTML = `<pre style="color: red;">Error loading file list: ${error.message}</pre>`;
+                        toggleActionButtons(false);
+                    }
+                }
+
+                function renderFileList(files)
+                {
+                    toggleActionButtons(false);
+                    fileContentTitle.textContent = 'File Content';
+                    contentDisplay.innerHTML = '<pre>Select a file from the list to preview its content.</pre>';
+                    files.forEach(file =>
+                    {
+                        const listItem = document.createElement('li');
+                        listItem.className = 'file-item';
+                        listItem.dataset.fileId = file.id_file;
+                        listItem.textContent = file.file_name;
+                        listItem.addEventListener('click', () => handleFileSelect(file.id_file, file.file_name, listItem));
+                        fileListElement.appendChild(listItem);
+                    });
+                }
+
+                function handleFileSelect(fileId, fileName, element)
+                {
+                    if (fileId === currentFileId)
+                    {
+                        element.classList.remove('active');
+                        currentFileId = null;
+                        currentFileName = null;
+                        fileContentTitle.textContent = 'File Content';
+                        contentDisplay.innerHTML = '<pre>Select a file from the list to preview its content.</pre>';
+                        toggleActionButtons(false);
+                    }
+                    else
+                    {
+                        fileListElement.querySelectorAll('.file-item').forEach(item => { item.classList.remove('active'); });
+                        element.classList.add('active');
+                        currentFileId = fileId;
+                        currentFileName = fileName;
+                        fileContentTitle.textContent = `Preview: ${fileName}`;
+                        toggleActionButtons(true);
+                        previewFileContent(fileId, fileName);
+                    }
+                }
+
+                async function previewFileContent(fileId, fileName)
+                {
+                    contentDisplay.innerHTML = '<pre>Loading file content...</pre>';
+                    const fileType = getFileType(fileName);
+                    const streamUrl = `/stream/${fileId}`;
+
+                    if (fileType !== 'text')
+                    {
+                        let mediaElement;
+
+                        switch (fileType)
+                        {
+                            case 'image':
+                                mediaElement = document.createElement('img');
+                                mediaElement.style.maxWidth = '100%';
+                                mediaElement.style.maxHeight = '100%';
+                                mediaElement.style.objectFit = 'contain';
+                                break;
+                            case 'audio':
+                                mediaElement = document.createElement('audio');
+                                mediaElement.controls = true;
+                                mediaElement.style.width = '100%';
+                                break;
+                            case 'video':
+                                mediaElement = document.createElement('video');
+                                mediaElement.controls = true;
+                                mediaElement.style.maxWidth = '100%';
+                                mediaElement.style.maxHeight = '100%';
+                                mediaElement.style.objectFit = 'contain';
+                                break;
+                        }
+
+                        mediaElement.src = streamUrl;
+
+                        const loadingMessage = document.createElement('p');
+                        loadingMessage.textContent = `Displaying ${fileType}. If the file is large, it may take a moment to decrypt and load.`;
+                        loadingMessage.style.fontStyle = 'italic';
+                        loadingMessage.style.color = '#555';
+
+                        contentDisplay.innerHTML = '';
+                        contentDisplay.appendChild(loadingMessage);
+                        contentDisplay.appendChild(mediaElement);
+
+                        mediaElement.onload = () => loadingMessage.remove();
+                        mediaElement.onloadeddata = () => loadingMessage.remove();
+                        mediaElement.onerror = () =>
+                        {
+                            loadingMessage.textContent = `Error loading ${fileType}. The file might be corrupted or the format unsupported by your browser.`;
+                            loadingMessage.style.color = 'red';
+                        };
+
+                        return;
+                    }
+
+                    try
+                    {
+                        const response = await fetch(`/text_preview/${fileId}`);
+                        if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+                        const content = await response.text();
+
+                        if (content.startsWith('File content is binary')) contentDisplay.innerHTML = `<p style="font-style: italic; color: #555;">${content}<br>Use the **Download** button to retrieve the original file.</p>`;
+                        else contentDisplay.innerHTML = `<pre>${content}</pre>`;
+                    }
+                    catch (error)
+                    {
+                        console.error('Error previewing text file:', error);
+                        contentDisplay.innerHTML = `<pre style="color: red;">Failed to load preview: ${error.message}</pre>`;
+                    }
+                }
+
+                function toggleActionButtons(enable)
+                {
+                    downloadButton.disabled = !enable;
+                    deleteButton.disabled = !enable;
+                }
+
+                function handleDownload() {if (currentFileId && currentFileName) window.location.href = `/download/${currentFileId}`;}
+
+                function handleDelete()
+                {
+                    if (currentFileId && confirm(`Are you sure you want to delete the file '${currentFileName}'? This action cannot be undone.`)) {
+                        toggleActionButtons(false);
+                        contentDisplay.innerHTML = '<pre>Deleting file...</pre>';
+
+                        fetch(`/delete/${currentFileId}`, { method: 'DELETE' }).then(response => 
+                        {
+                            if (response.ok)
+                            {
+                                alert('File deleted successfully.');
+                                contentDisplay.innerHTML = '<pre>Select a file from the list to preview its content.</pre>';
+                                fileContentTitle.textContent = 'File Content';
+                                currentFileId = null;
+                                currentFileName = null;
+                                fetchFiles();
+                            }
+                            else
+                            {
+                                response.text().then(text =>
+                                {
+                                    contentDisplay.innerHTML = `<pre style="color: red;">Failed to delete file: ${text}</pre>`;
+                                    alert(`Failed to delete file: ${text}`);
+                                    toggleActionButtons(true);
+                                });
+                            }
+                        })
+                        .catch(error =>
+                        {
+                            toggleActionButtons(true);
+                            console.error('Delete error:', error);
+                            contentDisplay.innerHTML = `<pre style="color: red;">Network error during deletion: ${error.message}</pre>`;
+                            alert('Network error during deletion.');
+                        });
+                    }
+                }
+                refreshButton.addEventListener('click', fetchFiles);
+                downloadButton.addEventListener('click', handleDownload);
+                deleteButton.addEventListener('click', handleDelete);
+                fetchFiles();
+            });
+        </script>
     </body>
 </html>

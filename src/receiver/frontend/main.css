@@ -6,7 +6,8 @@ body
     min-height: 100vh;
     margin: 0;
     font-family: Arial, sans-serif;
-    background-color: #e3f2fd;
+    background-color: #1f2023;
+    color: #dadada;
 }
 
 .main-content-area
@@ -16,7 +17,7 @@ body
     width: 90vw;
     max-width: 1200px;
     height: 80vh;
-    background-color: #fff;
+    background-color: #2a2c30;
     border-radius: 8px;
     box-shadow: 0 0 15px rgba(0, 0, 0, 0.2);
     overflow: hidden;
@@ -24,8 +25,8 @@ body
 
 h2
 {
-    color: #1565c0;
-    padding: 10px 15px;
+    color: #4A90E2;
+    padding: 12.5px 15px;
     margin: 0;
     border-bottom: 1px solid #ddd;
     text-align: center;
@@ -34,7 +35,7 @@ h2
 .file-list-panel
 {
     border-right: 1px solid #ddd;
-    background-color: #f8f8f8;
+    background-color: #2a2c30;
     overflow-y: auto;
 }
 
@@ -55,7 +56,7 @@ h2
     font-size: 0.95rem;
 }
 
-.file-item:hover {background-color: #e0f7fa;}
+.file-item:hover {background-color: #357ABD;}
 .file-item.active
 {
     background-color: #bbdefb;
@@ -69,6 +70,62 @@ h2
     flex-direction: column;
 }
 
+.file-viewer-actions
+{
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px 15px;
+    border-bottom: 1px solid #ddd;
+    background-color: #2a2c30;
+}
+
+.file-viewer-actions h2
+{
+    margin: 0;
+    padding: 0;
+    border-bottom: none;
+    flex-grow: 1;
+    text-align: left;
+    font-size: 1.2rem;
+    color: #4A90E2;
+}
+
+.action-buttons button
+{
+    padding: 8px 15px;
+    margin-left: 10px;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-weight: bold;
+    transition: background-color 0.2s;
+    white-space: nowrap;
+}
+
+#refresh-file
+{
+    background-color: #2600ff;
+    color: white;
+}
+#refresh-file:hover {background-color: #4A90E2;}
+
+#download-file
+{
+    background-color: #4CAF50;
+    color: white;
+}
+
+#download-file:hover:enabled {background-color: #45a049;}
+#delete-file
+{
+    background-color: #f44336;
+    color: white;
+}
+
+#delete-file:hover:enabled {background-color: #d32f2f;}
+.action-buttons button:disabled {cursor: not-allowed;}
+
 .content-display
 {
     flex-grow: 1;
@@ -77,7 +134,7 @@ h2
     text-align: left;
     font-size: 0.9rem;
     line-height: 1.6;
-    background-color: #ffffff;
+    background-color: #2a2c30;
 }
 
 .content-display pre
@@ -102,5 +159,30 @@ h2
         border-right: none;
         border-bottom: 1px solid #ddd;
     }
+
     .file-viewer-panel {height: 60vh;}
+    .file-viewer-actions
+    {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .file-viewer-actions h2
+    {
+        text-align: center;
+        margin-bottom: 10px;
+    }
+
+    .action-buttons
+    {
+        display: flex;
+        justify-content: space-around;
+        width: 100%;
+    }
+
+    .action-buttons button
+    {
+        margin: 5px;
+        flex-grow: 1;
+    }
 }
