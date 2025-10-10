@@ -12,24 +12,15 @@ pub fn generate_key() -> (EncryptionKey, InitializationVector)
     OsRng.fill_bytes(&mut key_bytes);
     let mut nonce_bytes = [0u8; 12];
     OsRng.fill_bytes(&mut nonce_bytes);
-    // Antes se usaba nonce_bytes, por pruebas se usa fijo
-    let nonce = InitializationVector::from([69, 42, 13, 8, 5, 1, 69, 42, 13, 8, 5, 1]);
+    let nonce = InitializationVector::from(nonce_bytes);
     (key_bytes, nonce)
 }
 
-pub fn encrypt_file(
-    plaintext_data: &[u8], 
-    key: &EncryptionKey, 
-    nonce: &InitializationVector
-) -> Result<Vec<u8>, Box<dyn StdError>>
+pub fn encrypt_file(plaintext_data: &[u8], key: &EncryptionKey, nonce: &InitializationVector) -> Result<Vec<u8>, Box<dyn StdError>>
 { 
     let cipher = Aes256Gcm::new(key.into());
-    let ciphertext_with_tag = cipher.encrypt(nonce, plaintext_data).map_err(|_| {
-        "Encryption failed internally"
-    })?;
-    
+    let ciphertext_with_tag = cipher.encrypt(nonce, plaintext_data).map_err(|_| {"Encryption failed internally"})?;
     println!("File encrypted successfully.");
-
     return Ok(ciphertext_with_tag)
 }
 

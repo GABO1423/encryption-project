@@ -11,16 +11,26 @@
             <h2>Upload File</h2>
             <input type="file" id="localFile">
             <button onclick="uploadFile()">Upload</button>
+            <p id="status-message"></p>
         </div>
         <script>
             const UPLOAD_URL = '/upload'; 
+            const statusMessage = document.getElementById('status-message');
+
+            function updateStatus(message, isError = false)
+            {
+                statusMessage.textContent = message;
+                statusMessage.style.color = isError ? '#c62828' : '#2e7d32';
+            }
+
             function uploadFile()
             {
                 const fileInput = document.getElementById('localFile');
+                updateStatus('Uploading...', false);
 
                 if (!fileInput || fileInput.files.length === 0)
                 {
-                    alert('Please select a file.');
+                    updateStatus('Please select a file.', true);
                     console.error('No file selected.');
                     return;
                 }
@@ -37,8 +47,16 @@
                     if (response.ok) return response.text();
                     throw new Error(`Error HTTP ${response.status}: ${response.statusText}`);
                 })
-                .then(data => {console.log('Uploaded file.', data);})
-                .catch(error => {console.error(`Upload Error: ${error}`);});
+                .then(data => 
+                {
+                    console.log('Upload success:', data);
+                    updateStatus('Upload Successful! Data forwarded to receiver.', false);
+                })
+                .catch(error => 
+                {
+                    console.error(`Upload Error: ${error}`);
+                    updateStatus(`Upload Failed: ${error.message || error}`, true);
+                });
             }
         </script>
     </body>
